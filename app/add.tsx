@@ -1,98 +1,88 @@
+// app/add.tsx
 import { useState } from "react";
-import {
-  View,
-  TextInput,
-  Button,
-  StyleSheet,
-  Alert,
-  Switch,
-  Text,
-} from "react-native";
+import { View, TextInput, Button, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { createBook } from "../lib/api";
+import Toast from "react-native-toast-message";
 
 export default function AddBook() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [author, setAuthor] = useState("");
-  const [editor, setEditor] = useState("");
-  const [year, setYear] = useState("");
-  const [read, setRead] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [book, setBook] = useState({
+    name: "",
+    author: "",
+    editor: "",
+    year: 0,
+    read: false,
+    favorite: false,
+  });
 
   const handleSubmit = async () => {
-    if (!name || !author || !editor || !year) {
-      Alert.alert("Erreur", "Tous les champs sont obligatoires");
+    if (!book.name || !book.author) {
+      Toast.show({
+        type: "error",
+        text1: "Champs requis",
+        text2: "Titre et auteur obligatoires",
+      });
       return;
     }
 
-    setSubmitting(true);
     try {
-      await createBook({
-        name,
-        author,
-        editor,
-        year: parseInt(year),
-        read,
+      await createBook(book);
+      Toast.show({
+        type: "success",
+        text1: "Succès !",
+        text2: "Livre ajouté avec succès",
       });
-      Alert.alert("Succès", "Livre ajouté !");
       router.back();
-    } catch (err) {
-      Alert.alert("Erreur", "Impossible d’ajouter le livre");
-    } finally {
-      setSubmitting(false);
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Erreur",
+        text2: "Impossible d’ajouter le livre",
+      });
     }
   };
 
   return (
     <View style={styles.container}>
       <TextInput
+        style={styles.input}
         placeholder="Titre"
-        value={name}
-        onChangeText={setName}
-        style={styles.input}
+        value={book.name}
+        onChangeText={(v) => setBook({ ...book, name: v })}
       />
       <TextInput
+        style={styles.input}
         placeholder="Auteur"
-        value={author}
-        onChangeText={setAuthor}
-        style={styles.input}
+        value={book.author}
+        onChangeText={(v) => setBook({ ...book, author: v })}
       />
       <TextInput
+        style={styles.input}
         placeholder="Éditeur"
-        value={editor}
-        onChangeText={setEditor}
-        style={styles.input}
+        value={book.editor}
+        onChangeText={(v) => setBook({ ...book, editor: v })}
       />
       <TextInput
-        placeholder="Année"
-        value={year}
-        onChangeText={setYear}
-        keyboardType="numeric"
         style={styles.input}
+        placeholder="Année"
+        value={book.year.toString()}
+        onChangeText={(v) => setBook({ ...book, year: Number(v) || 0 })}
+        keyboardType="numeric"
       />
-      <View style={styles.row}>
-        <Text>Lu :</Text>
-        <Switch value={read} onValueChange={setRead} />
-      </View>
-      <Button title="Ajouter" onPress={handleSubmit} disabled={submitting} />
+      <Button title="Ajouter le livre" onPress={handleSubmit} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1, padding: 16, backgroundColor: "#f9f9f9" },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
+    borderRadius: 12,
     padding: 12,
-    borderRadius: 8,
     marginBottom: 12,
-    fontSize: 16,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
+    backgroundColor: "#fff",
   },
 });

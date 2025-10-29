@@ -7,6 +7,17 @@ export interface Book {
   editor: string;
   year: number;
   read: boolean;
+  favorite: boolean;
+  rating?: number;
+  cover?: string;
+  theme?: string;
+}
+
+export interface Note {
+  id: number;
+  bookId: number;
+  content: string;
+  dateISO: string;
 }
 
 export const fetchBooks = async (): Promise<Book[]> => {
@@ -54,4 +65,30 @@ export const deleteBook = async (id: number): Promise<void> => {
 
 export const toggleRead = async (id: number, currentRead: boolean): Promise<Book> => {
   return updateBook(id, { read: !currentRead });
+};
+
+export const fetchBook = async (id: number): Promise<Book> => {
+  const res = await fetch(`${API_URL}/books/${id}`);
+  if (!res.ok) throw new Error("Livre non trouvé");
+  return res.json();
+};
+
+export const fetchNotes = async (bookId: number): Promise<Note[]> => {
+  const res = await fetch(`${API_URL}/books/${bookId}/notes`);
+  if (!res.ok) throw new Error("Erreur chargement notes");
+  return res.json();
+};
+
+export const createNote = async (bookId: number, content: string): Promise<Note> => {
+  const res = await fetch(`${API_URL}/books/${bookId}/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error("Erreur ajout note");
+  return res.json();
+};
+
+export const toggleFavorite = async (id: number, current: boolean): Promise<Book> => {
+  return updateBook(id, { favorite: !current });
 };
