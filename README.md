@@ -64,15 +64,51 @@ npm install
 cd ../API-BOOKS
 node server.js
 # → Doit afficher : "API démarrée sur http://localhost:3000"
-
-# 4. Lancer l'app
-npx expo start
 ```
 
-### Sur mobile :
-- Scannez le **QR code** avec **Expo Go** (iOS/Android)
+---
 
-### Sur émulateur :
+## **ÉTAPE CRUCIALE : Configurer l'IP locale**
+
+> **Le téléphone (Expo Go) ne peut pas accéder à `localhost` du PC.**  
+> **Vous devez utiliser l’IP locale de votre machine.**
+
+### Trouvez l’**IP locale** de votre ordinateur :
+
+| OS | Commande |
+|----|---------|
+| **Windows** | `ipconfig` → cherche `Adresse IPv4` (ex: `192.168.1.35`) |
+| **Mac** | `ifconfig` → cherche `en0` ou `wlan0` |
+| **Linux** | `ip addr show` |
+
+**Exemple : `192.168.1.35`**
+
+---
+
+### Modifiez `lib/api.ts`
+
+```ts
+// REMPLACEZ CETTE LIGNE :
+const API_BASE = 'http://192.168.1.XX:3000';
+
+// PAR VOTRE IP (exemple) :
+const API_BASE = 'http://192.168.1.35:3000';
+```
+
+> **Assurez-vous que votre téléphone est sur le même Wi-Fi que le PC.**
+
+---
+
+### Lancer l'app
+
+```bash
+npx expo start --clear
+```
+
+#### Sur mobile :
+- Scannez le **QR code** avec **Expo Go**
+
+#### Sur émulateur :
 - `a` → Android  
 - `i` → iOS
 
@@ -80,23 +116,12 @@ npx expo start
 
 ---
 
-## Configuration API
-
-- L’app utilise automatiquement :
-  ```ts
-  http://10.0.2.2:3000  → Android Emulator  
-  http://localhost:3000 → iOS / Expo Go
-  ```
-- Aucune modification nécessaire si votre `server.js` écoute sur le port `3000`.
-
----
-
 ## Fonctionnement clé
 
 ### 1. **Thème clair/sombre**
-- Bouton **soleil/lune** en haut à droite de l’écran principal
+- Bouton **soleil/lune** en haut à droite
 - Persistance via `AsyncStorage`
-- Appliqué **sur toutes les pages** via `ThemeContext`
+- Appliqué **sur toutes les pages**
 
 ### 2. **Mode hors ligne**
 - Les livres sont **sauvegardés localement**
