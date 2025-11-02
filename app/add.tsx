@@ -82,7 +82,7 @@ export default function AddBook() {
         startingValue={form.rating}
         ratingCount={5}
         imageSize={24}
-        onFinishRating={(r: any) => setForm({ ...form, rating: r })}
+        onFinishRating={(r: any) => setForm((prev) => ({ ...prev, rating: r }))}
         style={styles.rating}
         tintColor={isDark ? "#121212" : "#f9f9f9"}
       />

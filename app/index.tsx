@@ -1,15 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  Dimensions,
-} from "react-native";
+import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Modal, ScrollView, Dimensions } from "react-native";
 import { Link } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import BookCard from "../components/BookCard";

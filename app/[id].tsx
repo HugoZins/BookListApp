@@ -1,31 +1,10 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  FlatList,
-  Alert,
-  StyleSheet,
-  TouchableOpacity,
-  Switch,
-  Image,
-  ScrollView,
-} from "react-native";
+import { View, Text, TextInput, Button, Alert, StyleSheet, TouchableOpacity, Switch, Image, ScrollView } from "react-native";
 import { Rating } from "react-native-ratings";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
-import {
-  fetchBook,
-  updateBook,
-  fetchNotes,
-  createNote,
-  toggleFavorite,
-  fetchOpenLibraryEditions,
-  Book,
-  Note,
-} from "../lib/api";
+import { fetchBook, updateBook, fetchNotes, createNote, toggleFavorite, fetchOpenLibraryEditions, Book, Note } from "../lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 
@@ -212,8 +191,8 @@ export default function BookDetail() {
             startingValue={form.rating}
             ratingCount={5}
             imageSize={24}
-            onFinishRating={(rating: any) =>
-              setForm((prev) => ({ ...prev, rating }))
+            onFinishRating={
+              (rating) => setForm((prev) => ({ ...prev, rating })) // ← FIX
             }
             style={styles.rating}
             tintColor={isDark ? "#121212" : "#f9f9f9"}
