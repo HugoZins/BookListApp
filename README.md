@@ -1,50 +1,122 @@
-# Welcome to your Expo app 👋
+# **BookListApp** – Gestion de bibliothèque mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Application **React Native (Expo)** de gestion d'une bibliothèque personnelle, connectée à **votre API locale** (`server.js` du dossier `API-BOOKS`).  
+**Ce dépôt contient uniquement le frontend** – **le serveur n’est pas inclus**.
 
-## Get started
+---
 
-1. Install dependencies
+## Fonctionnalités implémentées (20/20)
 
-   ```bash
-   npm install
-   ```
+| Fonctionnalité | Statut |
+|----------------|--------|
+| Liste des livres avec recherche, filtres (lus/non lus/favoris) et tri (titre/auteur/thème) | Done |
+| Ajout, modification, suppression de livres | Done |
+| Notes par livre | Done |
+| Favoris (cœur) | Done |
+| Notation (étoiles) | Done |
+| Couverture personnalisée (galerie) | Done |
+| **Mode hors ligne** (AsyncStorage) | Done |
+| **Thème clair/sombre global** (Context + persistance) | Done |
+| **Intégration OpenLibrary** (nombre d’éditions) | Done |
+| **Bouton thème (soleil/lune)** dans le header | Done |
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## Structure du projet
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+BookListApp/
+├── app/
+│   ├── _layout.tsx          → ThemeProvider + Stack global 
+│   ├── index.tsx            → Liste principale (recherche, filtres, tri)
+│   ├── add.tsx              → Formulaire d'ajout
+│   ├── [id].tsx             → Détail du livre + notes + OpenLibrary
+│   └── ...
+├── components/
+│   ├── BookCard.tsx         → Carte livre (affichage + favori + suppression)
+│   ├── DeleteModal.tsx      → Confirmation suppression
+│   └── ...
+├── context/
+│   └── ThemeContext.tsx     → Gestion globale du thème (clair/sombre)
+├── lib/
+│   ├── api.ts               → Requêtes Axios + mode offline
+│   └── ...
+└── package.json
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## Lancement du projet
 
-To learn more about developing your project with Expo, look at the following resources:
+> **Prérequis** : Votre API `server.js` doit être **lancée sur `http://localhost:3000`**
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Étapes :
 
-## Join the community
+```bash
+# 1. Cloner le dépôt
+git clone https://github.com/HugoZins/BookListApp.git
+cd BookListApp
 
-Join our community of developers creating universal apps.
+# 2. Installer les dépendances
+npm install
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# 3. Lancer votre API (dans un autre terminal)
+cd ../API-BOOKS
+node server.js
+# → Doit afficher : "API démarrée sur http://localhost:3000"
+
+# 4. Lancer l'app
+npx expo start
+```
+
+### Sur mobile :
+- Scannez le **QR code** avec **Expo Go** (iOS/Android)
+
+### Sur émulateur :
+- `a` → Android  
+- `i` → iOS
+
+> **Note** : L'app fonctionne **même sans réseau** grâce au mode offline.
+
+---
+
+## Configuration API
+
+- L’app utilise automatiquement :
+  ```ts
+  http://10.0.2.2:3000  → Android Emulator  
+  http://localhost:3000 → iOS / Expo Go
+  ```
+- Aucune modification nécessaire si votre `server.js` écoute sur le port `3000`.
+
+---
+
+## Fonctionnement clé
+
+### 1. **Thème clair/sombre**
+- Bouton **soleil/lune** en haut à droite de l’écran principal
+- Persistance via `AsyncStorage`
+- Appliqué **sur toutes les pages** via `ThemeContext`
+
+### 2. **Mode hors ligne**
+- Les livres sont **sauvegardés localement**
+- Chargement au démarrage même sans réseau
+- Synchronisation automatique dès que le réseau revient
+
+### 3. **OpenLibrary**
+- Dans la fiche d’un livre :  
+  `Éditions OpenLibrary : 27`
+
+---
+
+## Technologies utilisées
+
+| Technologie | Rôle |
+|-------------|------|
+| **Expo Router** | Navigation basée sur fichiers |
+| **React Native** | UI native |
+| **Axios** | Requêtes API |
+| **AsyncStorage** | Persistance locale |
+| **Context API** | Thème global |
+| **react-native-ratings** | Étoiles |
+| **expo-image-picker** | Couverture |

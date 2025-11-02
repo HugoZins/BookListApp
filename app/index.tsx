@@ -1,18 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-} from "react-native";
+import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Modal, ScrollView, Dimensions } from "react-native";
 import { Link } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import BookCard from "../components/BookCard";
 import { fetchBooks, Book } from "../lib/api";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../context/ThemeContext";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -42,6 +35,7 @@ export default function Index() {
   const [sort, setSort] = useState<string>("title");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [modalVisible, setModalVisible] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
 
   const searchInputRef = useRef<TextInput>(null);
 
@@ -57,18 +51,16 @@ export default function Index() {
       });
       setBooks(data);
     } catch (error) {
-      console.error("Erreur chargement livres", error);
+      console.warn("Mode hors ligne activé");
     } finally {
       setLoading(false);
     }
   }, [search, filterRead, filterFavorite, sort, order]);
 
-  // Recharge sur debounce, filtres, tri
   useEffect(() => {
     loadBooks();
   }, [loadBooks]);
 
-  // Recharge sur focus (retour après ajout/modif)
   useFocusEffect(
     useCallback(() => {
       loadBooks();
@@ -83,24 +75,33 @@ export default function Index() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.loading}>Chargement...</Text>
+      <View style={[styles.center, isDark && styles.darkBg]}>
+        <Text style={[styles.loading, isDark && styles.darkText]}>
+          Chargement...
+        </Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && styles.darkBg]}>
       {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Ma Bibliothèque</Text>
+      <View style={[styles.header, isDark && styles.darkHeader]}>
+        <Text style={[styles.title, isDark && styles.darkTitle]}>
+          Ma Bibliothèque
+        </Text>
         <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={18} color="#666" />
+          <View style={[styles.searchBar, isDark && styles.darkInput]}>
+            <Ionicons
+              name="search"
+              size={18}
+              color={isDark ? "#aaa" : "#666"}
+            />
             <TextInput
               ref={searchInputRef}
-              style={styles.searchInput}
+              style={[styles.searchInput, isDark && styles.darkText]}
               placeholder="Rechercher..."
+              placeholderTextColor={isDark ? "#aaa" : "#999"}
               value={rawSearch}
               onChangeText={setRawSearch}
               autoFocus={false}
@@ -108,7 +109,7 @@ export default function Index() {
             />
           </View>
           <TouchableOpacity
-            style={styles.filterBtn}
+            style={[styles.filterBtn, isDark && styles.darkBtn]}
             onPress={() => setModalVisible(true)}
           >
             <Ionicons name="options-outline" size={22} color="#6C5CE7" />
@@ -118,13 +119,20 @@ export default function Index() {
               </View>
             )}
           </TouchableOpacity>
+          <TouchableOpacity onPress={toggleTheme} style={styles.themeBtn}>
+            <Ionicons
+              name={isDark ? "sunny-outline" : "moon-outline"}
+              size={24}
+              color={isDark ? "#fff" : "#6C5CE7"}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
       {/* LISTE */}
       {books.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.empty}>
+          <Text style={[styles.empty, isDark && styles.darkText]}>
             {rawSearch ? "Aucun livre trouvé" : "Aucun livre"}
           </Text>
           <Link href="/add" asChild>
@@ -147,12 +155,16 @@ export default function Index() {
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
               <View style={styles.cardWrapper}>
-                <BookCard book={item} onUpdate={loadBooks} />
+                <BookCard
+                  book={item}
+                  onUpdate={loadBooks}
+                  theme={isDark ? "dark" : "light"}
+                />
               </View>
             )}
             style={styles.grid}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 90, paddingHorizontal: 6 }}
+            contentContainerStyle={{ paddingBottom: 140, paddingHorizontal: 6 }}
           />
         </>
       )}
@@ -165,131 +177,157 @@ export default function Index() {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filtres & Tri</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={26} color="#666" />
-              </TouchableOpacity>
-            </View>
-
-            {/* FILTRES */}
-            <View style={styles.filterGroup}>
-              <Text style={styles.groupTitle}>Statut</Text>
-              <View style={styles.filterRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.filterChip,
-                    filterRead === true && styles.activeChip,
-                  ]}
-                  onPress={() =>
-                    setFilterRead(filterRead === true ? undefined : true)
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      filterRead === true && styles.activeText,
-                    ]}
-                  >
-                    Lus
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.filterChip,
-                    filterRead === false && styles.activeChip,
-                  ]}
-                  onPress={() =>
-                    setFilterRead(filterRead === false ? undefined : false)
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      filterRead === false && styles.activeText,
-                    ]}
-                  >
-                    Non lus
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.filterGroup}>
-              <Text style={styles.groupTitle}>Favoris</Text>
-              <View style={styles.filterRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.filterChip,
-                    filterFavorite === true && styles.activeChip,
-                  ]}
-                  onPress={() =>
-                    setFilterFavorite(
-                      filterFavorite === true ? undefined : true
-                    )
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      filterFavorite === true && styles.activeText,
-                    ]}
-                  >
-                    Favoris
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* TRI */}
-            <View style={styles.filterGroup}>
-              <Text style={styles.groupTitle}>Trier par</Text>
-              {["title", "author", "theme"].map((key) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[styles.sortItem, sort === key && styles.activeSort]}
-                  onPress={() => {
-                    if (sort === key) {
-                      setOrder(order === "asc" ? "desc" : "asc");
-                    } else {
-                      setSort(key);
-                      setOrder("asc");
-                    }
-                  }}
-                >
-                  <View style={styles.sortRow}>
-                    <Text style={styles.sortText}>
-                      {key === "title"
-                        ? "Titre"
-                        : key === "author"
-                        ? "Auteur"
-                        : "Thème"}
-                    </Text>
-                    {sort === key && (
-                      <Ionicons
-                        name={order === "asc" ? "arrow-up" : "arrow-down"}
-                        size={16}
-                        color="#6C5CE7"
-                      />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={styles.resetBtn}
-              onPress={() => {
-                setFilterRead(undefined);
-                setFilterFavorite(undefined);
-                setSort("title");
-                setOrder("asc");
-                setModalVisible(false);
-              }}
+          <View style={[styles.modal, isDark && styles.darkModal]}>
+            <ScrollView
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={{ paddingBottom: 180 }}
             >
-              <Text style={styles.resetText}>Réinitialiser</Text>
-            </TouchableOpacity>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, isDark && styles.darkText]}>
+                  Filtres & Tri
+                </Text>
+                <TouchableOpacity onPress={() => setModalVisible(false)}>
+                  <Ionicons
+                    name="close"
+                    size={26}
+                    color={isDark ? "#ccc" : "#666"}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterGroup}>
+                <Text style={[styles.groupTitle, isDark && styles.darkText]}>
+                  Statut
+                </Text>
+                <View style={styles.filterRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.filterChip,
+                      filterRead === true && styles.activeChip,
+                      isDark && styles.darkChip,
+                    ]}
+                    onPress={() =>
+                      setFilterRead(filterRead === true ? undefined : true)
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        filterRead === true && styles.activeText,
+                      ]}
+                    >
+                      Lus
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.filterChip,
+                      filterRead === false && styles.activeChip,
+                      isDark && styles.darkChip,
+                    ]}
+                    onPress={() =>
+                      setFilterRead(filterRead === false ? undefined : false)
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        filterRead === false && styles.activeText,
+                      ]}
+                    >
+                      Non lus
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.filterGroup}>
+                <Text style={[styles.groupTitle, isDark && styles.darkText]}>
+                  Favoris
+                </Text>
+                <View style={styles.filterRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.filterChip,
+                      filterFavorite === true && styles.activeChip,
+                      isDark && styles.darkChip,
+                    ]}
+                    onPress={() =>
+                      setFilterFavorite(
+                        filterFavorite === true ? undefined : true
+                      )
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        filterFavorite === true && styles.activeText,
+                      ]}
+                    >
+                      Favoris
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.filterGroup}>
+                <Text style={[styles.groupTitle, isDark && styles.darkText]}>
+                  Trier par
+                </Text>
+                {["title", "author", "theme"].map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      styles.sortItem,
+                      sort === key && styles.activeSort,
+                      isDark && styles.darkSort,
+                    ]}
+                    onPress={() => {
+                      if (sort === key) {
+                        setOrder(order === "asc" ? "desc" : "asc");
+                      } else {
+                        setSort(key);
+                        setOrder("asc");
+                      }
+                    }}
+                  >
+                    <View style={styles.sortRow}>
+                      <Text
+                        style={[styles.sortText, isDark && styles.darkText]}
+                      >
+                        {key === "title"
+                          ? "Titre"
+                          : key === "author"
+                          ? "Auteur"
+                          : "Thème"}
+                      </Text>
+                      {sort === key && (
+                        <Ionicons
+                          name={order === "asc" ? "arrow-up" : "arrow-down"}
+                          size={16}
+                          color="#6C5CE7"
+                        />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.resetBtn, isDark && styles.darkBtn]}
+                onPress={() => {
+                  setFilterRead(undefined);
+                  setFilterFavorite(undefined);
+                  setSort("title");
+                  setOrder("asc");
+                  setModalVisible(false);
+                }}
+              >
+                <Text style={[styles.resetText, isDark && styles.darkText]}>
+                  Réinitialiser
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -299,6 +337,7 @@ export default function Index() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8f9fa" },
+  darkBg: { backgroundColor: "#121212" },
   header: {
     padding: 12,
     backgroundColor: "#fff",
@@ -308,6 +347,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
+  darkHeader: { backgroundColor: "#1e1e1e" },
   title: {
     fontSize: 22,
     fontWeight: "bold",
@@ -315,6 +355,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#6C5CE7",
   },
+  darkTitle: { color: "#fff" },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -330,15 +371,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: "#fff",
   },
+  darkInput: { backgroundColor: "#333", borderColor: "#555", color: "#fff" },
   searchInput: {
     flex: 1,
     padding: 6,
     fontSize: 15,
+    color: "#000",
   },
   filterBtn: {
     backgroundColor: "#f0f0f0",
     padding: 6,
     borderRadius: 10,
+  },
+  darkBtn: { backgroundColor: "#333" },
+  themeBtn: {
+    padding: 6,
   },
   badge: {
     position: "absolute",
@@ -408,9 +455,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    padding: 16,
-    maxHeight: "70%",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 0,
+    maxHeight: Dimensions.get("window").height * 0.85,
+    width: "100%",
   },
+  darkModal: { backgroundColor: "#1e1e1e" },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -440,6 +491,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#eee",
     borderRadius: 16,
   },
+  darkChip: { backgroundColor: "#444" },
   activeChip: {
     backgroundColor: "#6C5CE7",
   },
@@ -458,6 +510,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 6,
   },
+  darkSort: { backgroundColor: "#333" },
   activeSort: {
     backgroundColor: "#e8e6ff",
   },
@@ -480,4 +533,5 @@ const styles = StyleSheet.create({
     color: "#666",
     fontWeight: "600",
   },
+  darkText: { color: "#fff" },
 });

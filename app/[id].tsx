@@ -4,16 +4,19 @@ import { View, Text, TextInput, Button, FlatList, Alert, StyleSheet, TouchableOp
 import { Rating } from "react-native-ratings";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
-import { fetchBook, updateBook, fetchNotes, createNote, toggleFavorite, Book, Note } from "../lib/api";
+import { fetchBook, updateBook, fetchNotes, createNote, toggleFavorite, fetchOpenLibraryEditions, Book, Note } from "../lib/api";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../context/ThemeContext";
 
 export default function BookDetail() {
   const { id } = useLocalSearchParams();
+  const { isDark } = useTheme();
   const [book, setBook] = useState<Book | null>(null);
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingNote, setSavingNote] = useState(false);
+  const [editions, setEditions] = useState<number>(0);
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Omit<Book, "id">>({
@@ -46,8 +49,13 @@ export default function BookDetail() {
         cover: b.cover || "",
       });
       setNotes(n);
+
+      if (b.name) {
+        const count = await fetchOpenLibraryEditions(b.name);
+        setEditions(count);
+      }
     } catch {
-      Alert.alert("Erreur", "Impossible de charger les données");
+      Alert.alert("Erreur", "Mode hors ligne activé");
     } finally {
       setLoading(false);
     }
@@ -126,46 +134,59 @@ export default function BookDetail() {
     }
   };
 
-  if (loading) return <Text style={styles.center}>Chargement...</Text>;
-  if (!book) return <Text style={styles.center}>Livre non trouvé</Text>;
+  if (loading)
+    return (
+      <Text style={[styles.center, isDark && styles.darkText]}>
+        Chargement...
+      </Text>
+    );
+  if (!book)
+    return (
+      <Text style={[styles.center, isDark && styles.darkText]}>
+        Livre non trouvé
+      </Text>
+    );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && styles.darkContainer]}>
       {editing ? (
         <ScrollView>
           <TextInput
-            style={styles.input}
+            style={[styles.input, isDark && styles.darkInput]}
             value={form.name}
             onChangeText={(v) => setForm({ ...form, name: v })}
             placeholder="Titre"
+            placeholderTextColor={isDark ? "#aaa" : "#999"}
           />
           <TextInput
-            style={styles.input}
+            style={[styles.input, isDark && styles.darkInput]}
             value={form.author}
             onChangeText={(v) => setForm({ ...form, author: v })}
             placeholder="Auteur"
+            placeholderTextColor={isDark ? "#aaa" : "#999"}
           />
           <TextInput
-            style={styles.input}
+            style={[styles.input, isDark && styles.darkInput]}
             value={form.editor}
             onChangeText={(v) => setForm({ ...form, editor: v })}
             placeholder="Éditeur"
+            placeholderTextColor={isDark ? "#aaa" : "#999"}
           />
           <TextInput
-            style={styles.input}
+            style={[styles.input, isDark && styles.darkInput]}
             value={form.year.toString()}
             onChangeText={(v) => setForm({ ...form, year: Number(v) || 0 })}
             placeholder="Année"
             keyboardType="numeric"
+            placeholderTextColor={isDark ? "#aaa" : "#999"}
           />
           <View style={styles.row}>
-            <Text>Lu ?</Text>
+            <Text style={isDark && styles.darkText}>Lu ?</Text>
             <Switch
               value={form.read}
               onValueChange={(v) => setForm({ ...form, read: v })}
             />
           </View>
-
           <Rating
             startingValue={form.rating}
             ratingCount={5}
@@ -174,13 +195,12 @@ export default function BookDetail() {
               setForm((prev) => ({ ...prev, rating }))
             }
             style={styles.rating}
+            tintColor={isDark ? "#121212" : "#f9f9f9"}
           />
-
           <Button title="Choisir une couverture" onPress={pickImage} />
           {form.cover ? (
             <Image source={{ uri: form.cover }} style={styles.coverPreview} />
           ) : null}
-
           <View style={styles.buttons}>
             <Button title="Annuler" onPress={() => setEditing(false)} />
             <Button title="Sauvegarder" onPress={handleSave} />
@@ -191,37 +211,44 @@ export default function BookDetail() {
           {book.cover ? (
             <Image source={{ uri: book.cover }} style={styles.coverImage} />
           ) : null}
-
-          <Text style={styles.title}>{book.name}</Text>
-          <Text style={styles.author}>{book.author}</Text>
-          <Text style={styles.meta}>
+          <Text style={[styles.title, isDark && styles.darkText]}>
+            {book.name}
+          </Text>
+          <Text style={[styles.author, isDark && styles.darkText]}>
+            {book.author}
+          </Text>
+          <Text style={[styles.meta, isDark && styles.darkText]}>
             {book.editor} • {book.year}
           </Text>
-
           <Rating
             startingValue={book.rating || 0}
             ratingCount={5}
             imageSize={24}
             readonly
             style={styles.rating}
+            tintColor={isDark ? "#121212" : "#f9f9f9"}
           />
-
           <TouchableOpacity onPress={toggleFav} style={styles.fav}>
             <Ionicons
               name={book.favorite ? "heart" : "heart-outline"}
               size={28}
-              color={book.favorite ? "#FF3B30" : "#666"}
+              color={book.favorite ? "#FF3B30" : isDark ? "#ccc" : "#666"}
             />
           </TouchableOpacity>
+
+          <Text style={[styles.openLibrary, isDark && styles.darkText]}>
+            Éditions OpenLibrary : {editions}
+          </Text>
 
           <Button title="Modifier le livre" onPress={() => setEditing(true)} />
 
           <View style={styles.addNote}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDark && styles.darkInput]}
               placeholder="Ajouter une note..."
               value={newNote}
               onChangeText={setNewNote}
+              placeholderTextColor={isDark ? "#aaa" : "#999"}
             />
             <Button
               title={savingNote ? "..." : "Ajouter"}
@@ -230,22 +257,29 @@ export default function BookDetail() {
             />
           </View>
 
-          <Text style={styles.section}>Notes ({notes.length})</Text>
+          <Text style={[styles.section, isDark && styles.darkText]}>
+            Notes ({notes.length})
+          </Text>
           {notes.length === 0 ? (
-            <Text style={styles.empty}>Aucune note</Text>
+            <Text style={[styles.empty, isDark && styles.darkText]}>
+              Aucune note
+            </Text>
           ) : (
             <FlatList
               data={notes}
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => (
-                <View style={styles.note}>
-                  <Text style={styles.noteContent}>{item.content}</Text>
-                  <Text style={styles.noteDate}>
+                <View style={[styles.note, isDark && styles.darkNote]}>
+                  <Text style={[styles.noteContent, isDark && styles.darkText]}>
+                    {item.content}
+                  </Text>
+                  <Text style={[styles.noteDate, isDark && styles.darkText]}>
                     {new Date(item.dateISO).toLocaleDateString("fr")}
                   </Text>
                 </View>
               )}
               nestedScrollEnabled={true}
+              contentContainerStyle={{ paddingBottom: 150 }}
             />
           )}
         </ScrollView>
@@ -256,6 +290,7 @@ export default function BookDetail() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#f9f9f9" },
+  darkContainer: { backgroundColor: "#121212" },
   title: { fontSize: 24, fontWeight: "bold", color: "#333", marginTop: 12 },
   author: { fontSize: 18, color: "#555", marginTop: 4 },
   meta: { fontSize: 14, color: "#888", marginTop: 4 },
@@ -269,6 +304,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: "#fff",
   },
+  darkInput: { backgroundColor: "#333", color: "#fff", borderColor: "#555" },
   row: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
   buttons: {
     flexDirection: "row",
@@ -285,6 +321,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     elevation: 1,
   },
+  darkNote: { backgroundColor: "#1e1e1e" },
   noteContent: { fontSize: 16 },
   noteDate: { fontSize: 12, color: "#999", marginTop: 4 },
   coverImage: {
@@ -295,4 +332,11 @@ const styles = StyleSheet.create({
   },
   coverPreview: { width: 100, height: 150, borderRadius: 8, marginVertical: 8 },
   rating: { marginVertical: 12 },
+  openLibrary: {
+    marginVertical: 12,
+    fontStyle: "italic",
+    color: "#6C5CE7",
+    fontWeight: "600",
+  },
+  darkText: { color: "#fff" },
 });

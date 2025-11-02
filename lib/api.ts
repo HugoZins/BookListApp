@@ -1,4 +1,15 @@
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+import axios from 'axios';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const API_BASE = Platform.OS === 'android' ? 'http://10.0.2.2:3000' : 'http://localhost:3000';
+
+const api = axios.create({
+  baseURL: API_BASE,
+  timeout: 5000,
+});
+
+const BOOKS_KEY = 'books_offline';
 
 export interface Book {
   id: number;
@@ -20,87 +31,74 @@ export interface Note {
   dateISO: string;
 }
 
-export const fetchBooks = async (params: {
-  q?: string;
-  read?: boolean;
-  favorite?: boolean;
-  sort?: string;
-  order?: 'asc' | 'desc';
-} = {}): Promise<Book[]> => {
-  const url = new URL(`${API_URL}/books`);
-  if (params.q) url.searchParams.append('q', params.q);
-  if (params.read !== undefined) url.searchParams.append('read', params.read.toString());
-  if (params.favorite !== undefined) url.searchParams.append('favorite', params.favorite.toString());
-  if (params.sort) url.searchParams.append('sort', params.sort);
-  if (params.order) url.searchParams.append('order', params.order);
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error('Erreur chargement');
-  return res.json();
+const saveOffline = async (books: Book[]) => {
+  await AsyncStorage.setItem(BOOKS_KEY, JSON.stringify(books));
 };
 
-export const createBook = async (book: Omit<Book, 'id'>): Promise<Book> => {
-  const res = await fetch(`${API_URL}/books`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(book),
-  });
-  if (!res.ok) throw new Error('Erreur création');
-  return res.json();
+const loadOffline = async (): Promise<Book[]> => {
+  const data = await AsyncStorage.getItem(BOOKS_KEY);
+  return data ? JSON.parse(data) : [];
 };
 
-export const updateBook = async (id: number, book: Partial<Book>): Promise<Book> => {
-  const res = await fetch(`${API_URL}/books/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(book),
-  });
-  if (!res.ok) throw new Error('Erreur mise à jour');
-  return res.json();
-};
-
-export const deleteBook = async (id: number): Promise<void> => {
-  const url = `${API_URL}/books/${id}`;
-
+export const fetchBooks = async (params = {}) => {
   try {
-    const res = await fetch(url, { method: "DELETE" });
-
-    if (!res.ok && res.status !== 404) {
-      const txt = await res.text();
-      console.error("Erreur serveur:", txt);
-      throw new Error(`Suppression échouée: ${txt}`);
-    }
-  } catch (err: any) {
-    console.error("ERREUR RÉSEAU:", err);
-    throw err;
+    const res = await api.get('/books', { params });
+    const books = res.data;
+    await saveOffline(books);
+    return books;
+  } catch {
+    return loadOffline();
   }
 };
 
-export const toggleRead = async (id: number, currentRead: boolean): Promise<Book> => {
-  return updateBook(id, { read: !currentRead });
+export const createBook = async (book: Omit<Book, 'id'>) => {
+  const res = await api.post('/books', book);
+  const newBook = res.data;
+  const books = await loadOffline();
+  await saveOffline([...books, newBook]);
+  return newBook;
 };
 
-export const fetchBook = async (id: number): Promise<Book> => {
-  const res = await fetch(`${API_URL}/books/${id}`);
-  if (!res.ok) throw new Error("Livre non trouvé");
-  return res.json();
+export const updateBook = async (id: number, book: Partial<Book>) => {
+  const res = await api.put(`/books/${id}`, book);
+  const updated = res.data;
+  const books = await loadOffline();
+  await saveOffline(books.map(b => b.id === id ? updated : b));
+  return updated;
 };
 
-export const fetchNotes = async (bookId: number): Promise<Note[]> => {
-  const res = await fetch(`${API_URL}/books/${bookId}/notes`);
-  if (!res.ok) throw new Error("Erreur chargement notes");
-  return res.json();
+export const deleteBook = async (id: number) => {
+  await api.delete(`/books/${id}`);
+  const books = await loadOffline();
+  await saveOffline(books.filter(b => b.id !== id));
 };
 
-export const createNote = async (bookId: number, content: string): Promise<Note> => {
-  const res = await fetch(`${API_URL}/books/${bookId}/notes`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content }),
-  });
-  if (!res.ok) throw new Error("Erreur ajout note");
-  return res.json();
+export const fetchBook = async (id: number) => {
+  const res = await api.get(`/books/${id}`);
+  return res.data;
 };
 
-export const toggleFavorite = async (id: number, current: boolean): Promise<Book> => {
+export const fetchNotes = async (bookId: number) => {
+  const res = await api.get(`/books/${bookId}/notes`);
+  return res.data;
+};
+
+export const createNote = async (bookId: number, content: string) => {
+  const res = await api.post(`/books/${bookId}/notes`, { content });
+  return res.data;
+};
+
+export const toggleFavorite = async (id: number, current: boolean) => {
   return updateBook(id, { favorite: !current });
+};
+
+export const fetchOpenLibraryEditions = async (title: string): Promise<number> => {
+  try {
+    const res = await axios.get(`https://openlibrary.org/search.json?title=${encodeURIComponent(title)}`, {
+      timeout: 4000,
+    });
+    return res.data.numFound || 0;
+  } catch {
+    return 0;
+  }
 };

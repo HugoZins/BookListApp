@@ -1,20 +1,20 @@
 import { useState } from "react";
-import { View, TextInput, Button, StyleSheet, Image } from "react-native";
+import { View, Text, TextInput, Button, StyleSheet, Switch, Image, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
-import { createBook } from "../lib/api";
-import Toast from "react-native-toast-message";
-import * as ImagePicker from "expo-image-picker";
 import { Rating } from "react-native-ratings";
+import * as ImagePicker from "expo-image-picker";
+import { createBook } from "../lib/api";
+import { useTheme } from "../context/ThemeContext";
 
 export default function AddBook() {
   const router = useRouter();
-  const [book, setBook] = useState({
+  const { isDark } = useTheme();
+  const [form, setForm] = useState({
     name: "",
     author: "",
     editor: "",
     year: 0,
     read: false,
-    favorite: false,
     rating: 0,
     cover: "",
   });
@@ -27,92 +27,94 @@ export default function AddBook() {
       quality: 1,
     });
     if (!result.canceled) {
-      setBook({ ...book, cover: result.assets[0].uri });
+      setForm({ ...form, cover: result.assets[0].uri });
     }
   };
 
-  const handleSubmit = async () => {
-    if (!book.name || !book.author) {
-      Toast.show({
-        type: "error",
-        text1: "Champs requis",
-        text2: "Titre et auteur obligatoires",
-      });
-      return;
-    }
-
+  const handleSave = async () => {
     try {
-      await createBook(book);
-      Toast.show({
-        type: "success",
-        text1: "Succès !",
-        text2: "Livre ajouté avec succès",
-      });
+      await createBook(form);
       router.back();
-    } catch {
-      Toast.show({
-        type: "error",
-        text1: "Erreur",
-        text2: "Impossible d’ajouter le livre",
-      });
+    } catch (err) {
+      console.error(err);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={[styles.container, isDark && styles.darkContainer]}>
       <TextInput
-        style={styles.input}
+        style={[styles.input, isDark && styles.darkInput]}
         placeholder="Titre"
-        value={book.name}
-        onChangeText={(v) => setBook({ ...book, name: v })}
+        value={form.name}
+        onChangeText={(v) => setForm({ ...form, name: v })}
+        placeholderTextColor={isDark ? "#aaa" : "#999"}
       />
       <TextInput
-        style={styles.input}
+        style={[styles.input, isDark && styles.darkInput]}
         placeholder="Auteur"
-        value={book.author}
-        onChangeText={(v) => setBook({ ...book, author: v })}
+        value={form.author}
+        onChangeText={(v) => setForm({ ...form, author: v })}
+        placeholderTextColor={isDark ? "#aaa" : "#999"}
       />
       <TextInput
-        style={styles.input}
+        style={[styles.input, isDark && styles.darkInput]}
         placeholder="Éditeur"
-        value={book.editor}
-        onChangeText={(v) => setBook({ ...book, editor: v })}
+        value={form.editor}
+        onChangeText={(v) => setForm({ ...form, editor: v })}
+        placeholderTextColor={isDark ? "#aaa" : "#999"}
       />
       <TextInput
-        style={styles.input}
+        style={[styles.input, isDark && styles.darkInput]}
         placeholder="Année"
-        value={book.year.toString()}
-        onChangeText={(v) => setBook({ ...book, year: Number(v) || 0 })}
+        value={form.year.toString()}
+        onChangeText={(v) => setForm({ ...form, year: Number(v) || 0 })}
         keyboardType="numeric"
+        placeholderTextColor={isDark ? "#aaa" : "#999"}
       />
-
+      <View style={styles.row}>
+        <Text style={isDark && styles.darkText}>Lu ?</Text>
+        <Switch
+          value={form.read}
+          onValueChange={(v) => setForm({ ...form, read: v })}
+        />
+      </View>
       <Rating
-        startingValue={book.rating}
+        startingValue={form.rating}
         ratingCount={5}
         imageSize={24}
-        onFinishRating={(rating) => setBook((prev) => ({ ...prev, rating }))}
+        onFinishRating={(r) => setForm({ ...form, rating: r })}
         style={styles.rating}
+        tintColor={isDark ? "#121212" : "#f9f9f9"}
       />
-
       <Button title="Choisir une couverture" onPress={pickImage} />
-      {book.cover ? (
-        <Image source={{ uri: book.cover }} style={styles.coverPreview} />
+      {form.cover ? (
+        <Image source={{ uri: form.cover }} style={styles.coverPreview} />
       ) : null}
-
-      <Button title="Ajouter le livre" onPress={handleSubmit} />
-    </View>
+      <View style={styles.buttons}>
+        <Button title="Annuler" onPress={() => router.back()} />
+        <Button title="Sauvegarder" onPress={handleSave} />
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#f9f9f9" },
+  darkContainer: { backgroundColor: "#121212" },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 8,
+    padding: 8,
     marginBottom: 12,
     backgroundColor: "#fff",
+  },
+  darkInput: { backgroundColor: "#333", color: "#fff", borderColor: "#555" },
+  row: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  buttons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
   },
   rating: { marginVertical: 12 },
   coverPreview: {
@@ -121,4 +123,5 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginVertical: 12,
   },
+  darkText: { color: "#fff" },
 });
