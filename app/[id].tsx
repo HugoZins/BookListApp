@@ -1,10 +1,31 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Button, FlatList, Alert, StyleSheet, TouchableOpacity, Switch, Image, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  FlatList,
+  Alert,
+  StyleSheet,
+  TouchableOpacity,
+  Switch,
+  Image,
+  ScrollView,
+} from "react-native";
 import { Rating } from "react-native-ratings";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
-import { fetchBook, updateBook, fetchNotes, createNote, toggleFavorite, fetchOpenLibraryEditions, Book, Note } from "../lib/api";
+import {
+  fetchBook,
+  updateBook,
+  fetchNotes,
+  createNote,
+  toggleFavorite,
+  fetchOpenLibraryEditions,
+  Book,
+  Note,
+} from "../lib/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 
@@ -191,7 +212,7 @@ export default function BookDetail() {
             startingValue={form.rating}
             ratingCount={5}
             imageSize={24}
-            onFinishRating={(rating) =>
+            onFinishRating={(rating: any) =>
               setForm((prev) => ({ ...prev, rating }))
             }
             style={styles.rating}
@@ -265,11 +286,12 @@ export default function BookDetail() {
               Aucune note
             </Text>
           ) : (
-            <FlatList
-              data={notes}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <View style={[styles.note, isDark && styles.darkNote]}>
+            <View style={{ paddingBottom: 150 }}>
+              {notes.map((item) => (
+                <View
+                  key={item.id.toString()}
+                  style={[styles.note, isDark && styles.darkNote]}
+                >
                   <Text style={[styles.noteContent, isDark && styles.darkText]}>
                     {item.content}
                   </Text>
@@ -277,10 +299,8 @@ export default function BookDetail() {
                     {new Date(item.dateISO).toLocaleDateString("fr")}
                   </Text>
                 </View>
-              )}
-              nestedScrollEnabled={true}
-              contentContainerStyle={{ paddingBottom: 150 }}
-            />
+              ))}
+            </View>
           )}
         </ScrollView>
       )}

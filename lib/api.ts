@@ -72,14 +72,29 @@ export const deleteBook = async (id: number) => {
   await saveOffline(books.filter(b => b.id !== id));
 };
 
-export const fetchBook = async (id: number) => {
-  const res = await api.get(`/books/${id}`);
-  return res.data;
+export const fetchBook = async (id: number): Promise<Book> => {
+  try {
+    const res = await api.get(`/books/${id}`);
+    return res.data;
+  } catch (error) {
+    console.warn("Mode hors ligne : chargement du livre depuis le cache");
+    const books = await loadOffline();
+    const book = books.find(b => b.id === id);
+    if (!book) {
+      throw new Error("Livre non trouvé dans le cache");
+    }
+    return book;
+  }
 };
 
-export const fetchNotes = async (bookId: number) => {
-  const res = await api.get(`/books/${bookId}/notes`);
-  return res.data;
+export const fetchNotes = async (bookId: number): Promise<Note[]> => {
+  try {
+    const res = await api.get(`/books/${bookId}/notes`);
+    return res.data;
+  } catch (error) {
+    console.warn("Mode hors ligne : notes non disponibles");
+    return [];
+  }
 };
 
 export const createNote = async (bookId: number, content: string) => {
