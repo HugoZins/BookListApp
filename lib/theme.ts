@@ -1,4 +1,3 @@
-// lib/theme.ts
 export const colors = {
   primary: "#6C5CE7",
   success: "#00B894",

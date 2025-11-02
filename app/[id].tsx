@@ -1,27 +1,11 @@
-// app/[id].tsx
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  FlatList,
-  Alert,
-  StyleSheet,
-  TouchableOpacity,
-  Switch,
-} from "react-native";
-import {
-  fetchBook,
-  updateBook,
-  fetchNotes,
-  createNote,
-  toggleFavorite,
-  Book,
-  Note,
-} from "../lib/api";
+import { View, Text, TextInput, Button, FlatList, Alert, StyleSheet, TouchableOpacity, Switch, Image, ScrollView } from "react-native";
+import { Rating } from "react-native-ratings";
+import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
+import { fetchBook, updateBook, fetchNotes, createNote, toggleFavorite, Book, Note } from "../lib/api";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function BookDetail() {
   const { id } = useLocalSearchParams();
@@ -31,7 +15,6 @@ export default function BookDetail() {
   const [loading, setLoading] = useState(true);
   const [savingNote, setSavingNote] = useState(false);
 
-  // État pour le mode édition
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Omit<Book, "id">>({
     name: "",
@@ -40,9 +23,10 @@ export default function BookDetail() {
     year: 0,
     read: false,
     favorite: false,
+    rating: 0,
+    cover: "",
   });
 
-  // Chargement des données
   const loadData = async () => {
     setLoading(true);
     try {
@@ -58,6 +42,8 @@ export default function BookDetail() {
         year: b.year,
         read: b.read,
         favorite: b.favorite,
+        rating: b.rating || 0,
+        cover: b.cover || "",
       });
       setNotes(n);
     } catch {
@@ -71,7 +57,6 @@ export default function BookDetail() {
     loadData();
   }, [id]);
 
-  // Sauvegarde des modifications
   const handleSave = async () => {
     try {
       const updated = await updateBook(Number(id), form);
@@ -91,10 +76,8 @@ export default function BookDetail() {
     }
   };
 
-  // Ajout d'une note
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
-
     setSavingNote(true);
     try {
       const note = await createNote(Number(id), newNote.trim());
@@ -116,7 +99,6 @@ export default function BookDetail() {
     }
   };
 
-  // Favori
   const toggleFav = async () => {
     if (!book) return;
     try {
@@ -132,15 +114,25 @@ export default function BookDetail() {
     }
   };
 
-  // États de chargement
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [3, 4],
+      quality: 1,
+    });
+    if (!result.canceled) {
+      setForm({ ...form, cover: result.assets[0].uri });
+    }
+  };
+
   if (loading) return <Text style={styles.center}>Chargement...</Text>;
   if (!book) return <Text style={styles.center}>Livre non trouvé</Text>;
 
   return (
     <View style={styles.container}>
-      {/* === MODE ÉDITION === */}
       {editing ? (
-        <View>
+        <ScrollView>
           <TextInput
             style={styles.input}
             value={form.name}
@@ -174,31 +166,56 @@ export default function BookDetail() {
             />
           </View>
 
+          <Rating
+            startingValue={form.rating}
+            ratingCount={5}
+            imageSize={24}
+            onFinishRating={(rating) =>
+              setForm((prev) => ({ ...prev, rating }))
+            }
+            style={styles.rating}
+          />
+
+          <Button title="Choisir une couverture" onPress={pickImage} />
+          {form.cover ? (
+            <Image source={{ uri: form.cover }} style={styles.coverPreview} />
+          ) : null}
+
           <View style={styles.buttons}>
             <Button title="Annuler" onPress={() => setEditing(false)} />
             <Button title="Sauvegarder" onPress={handleSave} />
           </View>
-        </View>
+        </ScrollView>
       ) : (
-        <>
-          {/* === AFFICHAGE NORMAL === */}
+        <ScrollView>
+          {book.cover ? (
+            <Image source={{ uri: book.cover }} style={styles.coverImage} />
+          ) : null}
+
           <Text style={styles.title}>{book.name}</Text>
           <Text style={styles.author}>{book.author}</Text>
           <Text style={styles.meta}>
             {book.editor} • {book.year}
           </Text>
 
-          {/* CŒUR FAVORI */}
+          <Rating
+            startingValue={book.rating || 0}
+            ratingCount={5}
+            imageSize={24}
+            readonly
+            style={styles.rating}
+          />
+
           <TouchableOpacity onPress={toggleFav} style={styles.fav}>
-            <Text style={styles.heart}>
-              {book.favorite ? "❤️" : "♡"} Favori
-            </Text>
+            <Ionicons
+              name={book.favorite ? "heart" : "heart-outline"}
+              size={28}
+              color={book.favorite ? "#FF3B30" : "#666"}
+            />
           </TouchableOpacity>
 
-          {/* BOUTON MODIFIER */}
           <Button title="Modifier le livre" onPress={() => setEditing(true)} />
 
-          {/* AJOUT NOTE */}
           <View style={styles.addNote}>
             <TextInput
               style={styles.input}
@@ -213,7 +230,6 @@ export default function BookDetail() {
             />
           </View>
 
-          {/* LISTE DES NOTES */}
           <Text style={styles.section}>Notes ({notes.length})</Text>
           {notes.length === 0 ? (
             <Text style={styles.empty}>Aucune note</Text>
@@ -229,23 +245,22 @@ export default function BookDetail() {
                   </Text>
                 </View>
               )}
+              nestedScrollEnabled={true}
             />
           )}
-        </>
+        </ScrollView>
       )}
     </View>
   );
 }
 
-// === STYLES ===
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#f9f9f9" },
-  title: { fontSize: 24, fontWeight: "bold", color: "#333" },
+  title: { fontSize: 24, fontWeight: "bold", color: "#333", marginTop: 12 },
   author: { fontSize: 18, color: "#555", marginTop: 4 },
   meta: { fontSize: 14, color: "#888", marginTop: 4 },
   center: { flex: 1, textAlign: "center", marginTop: 50, color: "#666" },
   fav: { marginVertical: 12 },
-  heart: { fontSize: 20 },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
@@ -272,4 +287,12 @@ const styles = StyleSheet.create({
   },
   noteContent: { fontSize: 16 },
   noteDate: { fontSize: 12, color: "#999", marginTop: 4 },
+  coverImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  coverPreview: { width: 100, height: 150, borderRadius: 8, marginVertical: 8 },
+  rating: { marginVertical: 12 },
 });

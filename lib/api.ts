@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 export interface Book {
   id: number;
@@ -8,8 +8,8 @@ export interface Book {
   year: number;
   read: boolean;
   favorite: boolean;
-  rating?: number;
-  cover?: string;
+  rating: number | null;
+  cover: string | null;
   theme?: string;
 }
 
@@ -20,8 +20,20 @@ export interface Note {
   dateISO: string;
 }
 
-export const fetchBooks = async (): Promise<Book[]> => {
-  const res = await fetch(`${API_URL}/books`);
+export const fetchBooks = async (params: {
+  q?: string;
+  read?: boolean;
+  favorite?: boolean;
+  sort?: string;
+  order?: 'asc' | 'desc';
+} = {}): Promise<Book[]> => {
+  const url = new URL(`${API_URL}/books`);
+  if (params.q) url.searchParams.append('q', params.q);
+  if (params.read !== undefined) url.searchParams.append('read', params.read.toString());
+  if (params.favorite !== undefined) url.searchParams.append('favorite', params.favorite.toString());
+  if (params.sort) url.searchParams.append('sort', params.sort);
+  if (params.order) url.searchParams.append('order', params.order);
+  const res = await fetch(url.toString());
   if (!res.ok) throw new Error('Erreur chargement');
   return res.json();
 };
